@@ -10,6 +10,7 @@
 | NumPy | BSD 3-Clause — https://github.com/numpy/numpy |
 | Pillow | HPND — https://github.com/python-pillow/Pillow |
 | ReportLab | BSD — https://www.reportlab.com/ |
+| Streamlit | Apache 2.0 — https://github.com/streamlit/streamlit |
 | rembg | MIT — https://github.com/danielgatis/rembg |
 | ONNX Runtime | MIT — https://github.com/microsoft/onnxruntime |
 | U²-Net | Apache 2.0 للمشروع الأصلي؛ راجع شروط الأوزان ومصدرها — https://github.com/xuebinqin/U-2-Net |

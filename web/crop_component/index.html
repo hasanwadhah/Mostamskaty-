@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{box-sizing:border-box}body{margin:0;color:#233750;font:14px system-ui,sans-serif;background:transparent}
+.tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:5px 0 10px}
+button{border:1px solid #cdd9e6;border-radius:7px;background:#fff;padding:7px 13px;color:#233750;cursor:pointer}
+.hint{font-size:12px;color:#62768b}canvas{display:block;width:100%;height:420px;background:#172337;border-radius:9px;touch-action:none;cursor:grab}
+#status{min-height:25px;font-size:12px;color:#62768b;padding-top:5px}
+</style>
+</head>
+<body>
+<div class="tools"><button id="fit" type="button">ملاءمة الصورة</button><button id="zoomIn" type="button">＋</button><button id="zoomOut" type="button">−</button><span class="hint">اسحب الزوايا الخضراء • عجلة الفأرة للتكبير • اسحب الخلفية للتحريك</span></div>
+<canvas id="canvas" aria-label="تعديل زوايا قص المستمسك" role="img"></canvas><div id="status" aria-live="polite">حرّك الزوايا، ثم اختر تطبيق القص أو اعتماد الصورة أسفل المحرر.</div>
+<script>
+'use strict';
+const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d');
+let image=null,points=[],revision='',source='',worldW=1,worldH=1,scale=1,offsetX=0,offsetY=0,drag=null,parentOrigin='*';
+function send(type,extra={}){window.parent.postMessage({isStreamlitMessage:true,type,...extra},parentOrigin)}
+function resize(){let r=canvas.getBoundingClientRect(),d=window.devicePixelRatio||1;canvas.width=Math.round(r.width*d);canvas.height=Math.round(r.height*d);ctx.setTransform(d,0,0,d,0,0);draw();send('streamlit:setFrameHeight',{height:510})}
+function fit(){if(!image)return;let r=canvas.getBoundingClientRect();scale=Math.min((r.width-40)/worldW,(r.height-40)/worldH);offsetX=(r.width-worldW*scale)/2;offsetY=(r.height-worldH*scale)/2;draw()}
+function draw(){let r=canvas.getBoundingClientRect();ctx.clearRect(0,0,r.width,r.height);if(!image)return;ctx.drawImage(image,offsetX,offsetY,worldW*scale,worldH*scale);if(points.length!==4)return;ctx.strokeStyle='#39d6ed';ctx.lineWidth=2;ctx.fillStyle='rgba(57,214,237,.08)';ctx.beginPath();points.forEach((p,i)=>{let x=p[0]*scale+offsetX,y=p[1]*scale+offsetY;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.closePath();ctx.fill();ctx.stroke();points.forEach((p,i)=>{let x=p[0]*scale+offsetX,y=p[1]*scale+offsetY;ctx.beginPath();ctx.arc(x,y,11,0,2*Math.PI);ctx.fillStyle='#16a765';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(i+1),x,y)})}
+function local(e){let r=canvas.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]}
+function publish(){send('streamlit:setComponentValue',{value:{revision,points:points.map(p=>p.slice())},dataType:'json'})}
+canvas.addEventListener('pointerdown',e=>{if(!image)return;const[x,y]=local(e);let corner=points.findIndex(p=>Math.hypot(p[0]*scale+offsetX-x,p[1]*scale+offsetY-y)<24);drag={corner,x,y,oldX:offsetX,oldY:offsetY};canvas.setPointerCapture(e.pointerId);canvas.style.cursor='grabbing';e.preventDefault()});
+canvas.addEventListener('pointermove',e=>{if(!drag)return;const[x,y]=local(e);if(drag.corner>=0){points[drag.corner]=[Math.max(0,Math.min(worldW-1,(x-offsetX)/scale)),Math.max(0,Math.min(worldH-1,(y-offsetY)/scale))]}else{offsetX=drag.oldX+x-drag.x;offsetY=drag.oldY+y-drag.y}draw()});
+function endDrag(){if(!drag)return;const edited=drag.corner>=0;drag=null;canvas.style.cursor='grab';if(edited){publish();document.getElementById('status').textContent='تم تحديث الزوايا. اختر تطبيق القص أو اعتماد الصورة.'}}
+canvas.addEventListener('pointerup',endDrag);canvas.addEventListener('pointercancel',endDrag);
+function zoom(factor,x,y){if(!image)return;let base=Math.min(canvas.clientWidth/worldW,canvas.clientHeight/worldH),next=Math.max(base*.25,Math.min(base*12,scale*factor));let wx=(x-offsetX)/scale,wy=(y-offsetY)/scale;scale=next;offsetX=x-wx*scale;offsetY=y-wy*scale;draw()}
+canvas.addEventListener('wheel',e=>{e.preventDefault();let[x,y]=local(e);zoom(e.deltaY<0?1.16:1/1.16,x,y)},{passive:false});
+document.getElementById('fit').onclick=fit;document.getElementById('zoomIn').onclick=()=>zoom(1.3,canvas.clientWidth/2,canvas.clientHeight/2);document.getElementById('zoomOut').onclick=()=>zoom(1/1.3,canvas.clientWidth/2,canvas.clientHeight/2);
+window.addEventListener('message',e=>{if(e.source!==window.parent||e.data?.type!=='streamlit:render')return;parentOrigin=e.origin;const a=e.data.args;if(!a||!Array.isArray(a.points))return;if(a.revision!==revision||a.image!==source){revision=a.revision;source=a.image;points=a.points.map(p=>p.slice());worldW=a.width;worldH=a.height;const loading=new Image();loading.onload=()=>{image=loading;resize();fit()};loading.src=source}});
+new ResizeObserver(()=>{resize();fit()}).observe(canvas);send('streamlit:componentReady',{apiVersion:1});send('streamlit:setFrameHeight',{height:510});
+</script>
+</body></html>

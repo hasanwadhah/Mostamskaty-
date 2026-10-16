@@ -141,13 +141,13 @@ _AI_MODEL_KEY = None
 U2NET_MD5 = "60024c5c889badc19c04ad937298a77b"  # Published by rembg's U2netSession.
 
 
-def detect_document(rgb: np.ndarray, target_ratio: float = 8.6 / 5.6) -> tuple[np.ndarray, str]:
+def detect_document(rgb: np.ndarray, target_ratio: float = 8.6 / 5.6, *, use_ai: bool = True) -> tuple[np.ndarray, str]:
     """Never download a model at runtime. Fall back to geometry when unavailable."""
     global _AI_SESSION, _AI_MODEL_KEY
     scale = min(1.0, 1400.0 / max(rgb.shape[:2]))
     small = cv2.resize(rgb, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
-    reason = "النموذج المحلي غير متوفر"
-    if local_model_path().is_file():
+    reason = "النموذج المحلي غير متوفر" if use_ai else "وضع الويب الخفيف"
+    if use_ai and local_model_path().is_file():
         try:
             model_stat = local_model_path().stat()
             model_key = (str(local_model_path().resolve()), model_stat.st_size, model_stat.st_mtime_ns)
