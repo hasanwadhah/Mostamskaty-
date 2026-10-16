@@ -1,0 +1,19 @@
+{
+  "name": "Mostamskaty — Arabic desktop",
+  "build": { "dockerfile": "Dockerfile" },
+  "features": {
+    "ghcr.io/devcontainers/features/desktop-lite:1": {}
+  },
+  "remoteUser": "vscode",
+  "forwardPorts": [6080],
+  "portsAttributes": {
+    "6080": {
+      "label": "Mostamskaty Desktop",
+      "onAutoForward": "notify"
+    }
+  },
+  "postCreateCommand": "bash scripts/setup_codespaces.sh",
+  "customizations": {
+    "codespaces": { "openFiles": ["README.md"] }
+  }
+}
